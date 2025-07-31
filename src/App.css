@@ -1,38 +1,101 @@
-.App {
-  text-align: center;
+.card-hover {
+  transition: transform 0.2s ease-in-out;
+  border: none !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding-bottom: 16px !important;
+  position: relative; /* Needed for positioning the button inside */
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.card-hover:hover {
+  transform: scale(1.05);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.card-hover .list-group-item,
+.card-hover .list-group-flush,
+.card-hover .card-body {
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 16px;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.card-hover .card-img-top {
+  border: none !important;
+  border-radius: 8px 8px 0 0;
 }
 
-.App-link {
-  color: #61dafb;
+/* Hides the button by default */
+.hide {
+  display: none;
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Show the button only when hovering */
+.card-hover:hover .hide {
+  display: block;
+}
+
+.viewallbtn:hover {
+  background-color: #003285;
+  color: white; /* Optional: improves contrast */
+}
+
+.viewallbtn {
+  border-color: #003285 !important;
+}
+
+.vieweventbtn:hover {
+  background-color: white !important;
+  color: black !important;
+  cursor: pointer;
+}
+
+.vieweventbtn button:hover {
+  background-color: white !important;
+  color: black !important;
+  border: 1px solid #003285 !important;
+}
+
+.eventbtn:hover {
+  background-color: white !important;
+  color: black !important;
+  cursor: pointer;
+}
+
+.eventbtn button:hover {
+  background-color: white !important;
+  color: black !important;
+  border: 1px solid #003285 !important;
+}
+
+.event-longdesc-section {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.event-longdesc {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #333;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #003285 #e0e0e0;
+}
+
+.event-longdesc::-webkit-scrollbar {
+  width: 6px;
+}
+.event-longdesc::-webkit-scrollbar-thumb {
+  background: #003285;
+  border-radius: 4px;
+}
+.event-longdesc::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border-radius: 4px;
 }
