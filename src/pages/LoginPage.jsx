@@ -14,9 +14,6 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { SignInPage } from '@toolpad/core/SignInPage';
 import { useTheme } from '@mui/material/styles';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { loginStart, loginSuccess, loginFailure, selectLoading, selectError } from '../store/userSlice';
 
 const providers = [{ id: 'credentials', name: 'Email and Password' }];
 
@@ -117,40 +114,10 @@ function Title() {
 
 export default function LoginPage() {
   const theme = useTheme();
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const loading = useAppSelector(selectLoading);
-  const error = useAppSelector(selectError);
-
-  const handleSignIn = (provider, formData) => {
-    const username = formData.get('username');
-    const password = formData.get('password');
-    
-    dispatch(loginStart());
-    
-    // Simulate API call - in real app, this would be an actual API call
-    setTimeout(() => {
-      // Mock role assignment based on username
-      let role = 'user';
-      if (username.includes('admin')) {
-        role = 'admin';
-      } else if (username.includes('club')) {
-        role = 'club_admin';
-      }
-      
-      dispatch(loginSuccess({
-        user: { username, id: Date.now() },
-        role
-      }));
-      
-      navigate('/');
-    }, 1000);
-  };
-
   return (
     <AppProvider theme={theme}>
       <SignInPage
-        signIn={handleSignIn}
+        signIn={() => {}}
         slots={{
           title: Title,
           emailField: CustomUsernameField,

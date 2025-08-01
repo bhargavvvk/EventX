@@ -1,18 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { logout, selectIsLoggedIn, selectUserRole, selectCanCreateEvents } from '../store/userSlice';
 
 const Navbar = () => {
-  const dispatch = useAppDispatch();
-  const isLoggedIn = useAppSelector(selectIsLoggedIn);
-  const userRole = useAppSelector(selectUserRole);
-  const canCreateEvents = useAppSelector(selectCanCreateEvents);
-
-  const handleLogout = () => {
-    dispatch(logout());
-  };
-
   return (
     <div>
       <nav className="navbar navbar-dark" style={{ backgroundColor: "#003285" }}>
@@ -36,24 +25,7 @@ const Navbar = () => {
 
           {/* Right: Event link + Profile */}
           <div className="d-flex align-items-center gap-3">
-            {!isLoggedIn ? (
-              <Link className="nav-link text-white" to="/login">List your event</Link>
-            ) : canCreateEvents ? (
-              <>
-                <Link className="nav-link text-white" to="/create-event">List your event</Link>
-                <span className="text-white small">({userRole})</span>
-                <button className="nav-link text-white border-0 bg-transparent" onClick={handleLogout}>
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-white small">({userRole})</span>
-                <button className="nav-link text-white border-0 bg-transparent" onClick={handleLogout}>
-                  Logout
-                </button>
-              </>
-            )}
+            <Link className="nav-link text-white" to="/login">List your event</Link>
             <Link className="nav-link" to="/profile">
               <img
                 src="/profile.png"

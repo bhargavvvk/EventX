@@ -1,13 +1,10 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import eventsData from '../data/events.json';
-import { useAppSelector } from '../store/hooks';
-import { selectIsLoggedIn } from '../store/userSlice';
 
 const ViewEvent = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const isLoggedIn = useAppSelector(selectIsLoggedIn);
   
   // Find the event by ID from both trending and all events
   const allEvents = [...eventsData.trendingEvents, ...eventsData.allEvents];
@@ -80,19 +77,9 @@ const ViewEvent = () => {
           </div>
           
           <div className="d-flex gap-3">
-            {isLoggedIn ? (
-              <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }}>
-                Book Now
-              </button>
-            ) : (
-              <button 
-                className="btn btn-primary eventbtn" 
-                style={{ backgroundColor: "#003285" }}
-                onClick={() => navigate('/login')}
-              >
-                Login to Book
-              </button>
-            )}
+            <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }}>
+              Book Now
+            </button>
             <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate(-1)}>
               Go Back
             </button>
