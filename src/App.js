@@ -6,6 +6,7 @@ import Home from './pages/home';
 import AllEventsPage from './pages/AllEventsPage';
 import ViewEvent from './pages/ViewEvent';
 import LoginPage from './pages/LoginPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/events" element={<AllEventsPage />} />
         <Route path="/event/:eventId" element={<ViewEvent />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/add-event" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );
