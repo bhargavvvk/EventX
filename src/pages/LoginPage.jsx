@@ -55,7 +55,7 @@ export default function LoginPage() {
       if(role === 'club-admin') {
         navigate('/add-event');
       } else {
-        alert('You are not authorized to access this page');
+        navigate('/');
       }
     } catch (err) {
       console.error('Login failed:', err.response?.data?.message || err.message);
