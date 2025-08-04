@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { getUserRole } from '../utils/auth';
 import {
   Button,
   FormControl,
@@ -47,13 +48,15 @@ export default function LoginPage() {
         username: form.username,
         password: form.password,
       });
-
-      console.log('Login successful:', res.data);
-
+      
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-
-      navigate('/');
+      const role = getUserRole();
+      if(role === 'club-admin') {
+        navigate('/add-event');
+      } else {
+        alert('You are not authorized to access this page');
+      }
     } catch (err) {
       console.error('Login failed:', err.response?.data?.message || err.message);
       setError(err.response?.data?.message || 'Login failed. Please try again.');

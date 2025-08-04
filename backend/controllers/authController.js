@@ -3,6 +3,7 @@
 // @access  Public
 
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
 
 const loginUser = async (req, res) => {
     const { username, password } = req.body;
@@ -23,11 +24,16 @@ const loginUser = async (req, res) => {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
   
+      const token = jwt.sign({ user: user }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
       res.status(200).json({
-        _id: user._id,
-        username: user.username,
-        role: user.role,
-        club: user.club,
+        user:{
+          id: user._id,
+          username: user.username,
+          role: user.role,
+          club: user.club,
+        },
+        token: token,
       });
     } catch (err) {
       console.error('Login error:', err.message);
