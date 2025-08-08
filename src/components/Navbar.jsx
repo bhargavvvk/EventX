@@ -1,28 +1,25 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getUserRole } from '../utils/auth';
+import { getUserRole, isAuthenticated, isAdmin, logout } from '../utils/auth';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const isLoggedIn = isAuthenticated();
   const role = getUserRole();
-  const isAdmin = token && role === 'club-admin';
+  const isUserAdmin = isAdmin();
 
   const handleAddEventClick = () => {
-    const token = localStorage.getItem("token");
-    const role = getUserRole();
-
-    if (!token) {
+    if (!isAuthenticated()) {
       navigate("/login");
-    } else if (role === "club-admin") {
-      navigate("/add-event");
+    } else if (isAdmin()) {
+      navigate("/admindashboard");
     } else {
       alert("Only admins can list events.");
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
@@ -35,7 +32,7 @@ const Navbar = () => {
           <Link className="navbar-brand text-white fw-bold fs-4" to="/">EventX</Link>
 
           {/* Center: Search Bar - Hidden for club-admin users */}
-          {!isAdmin && (
+          {!isUserAdmin && (
             <form className="d-flex mx-auto" role="search" style={{ width: "400px" }}>
               <input
                 className="form-control me-2"
@@ -80,12 +77,12 @@ const Navbar = () => {
                 />
               </button>
               <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                {!token && (
+                {!isLoggedIn && (
                   <li>
                     <Link className="dropdown-item" to="/login">Login</Link>
                   </li>
                 )}
-                {token && role === 'user' && (
+                {isLoggedIn && role === 'user' && (
                   <>
                     <li>
                       <Link className="dropdown-item" to="/my-events">Registered Events</Link>
@@ -96,7 +93,7 @@ const Navbar = () => {
                     </li>
                   </>
                 )}
-                {token && role === 'club-admin' && (
+                {isLoggedIn && role === 'club-admin' && (
                   <li>
                     <button className="dropdown-item" onClick={handleLogout}>Logout</button>
                   </li>

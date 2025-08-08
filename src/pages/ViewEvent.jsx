@@ -1,11 +1,13 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import eventsData from '../data/events.json';
+import { getUserRole } from '../utils/auth';
 
 const ViewEvent = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  
+  const role = getUserRole();
+
   // Find the event by ID from both trending and all events
   const allEvents = [...eventsData.trendingEvents, ...eventsData.allEvents];
   const event = allEvents.find(e => e.id === parseInt(eventId));
@@ -77,9 +79,11 @@ const ViewEvent = () => {
           </div>
           
           <div className="d-flex gap-3">
-            <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }}>
-              Book Now
-            </button>
+            {role === 'user' && (
+              <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }}>
+               Book Now
+              </button>
+            )}
             <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate(-1)}>
               Go Back
             </button>
