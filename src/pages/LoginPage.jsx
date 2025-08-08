@@ -53,7 +53,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(res.data.user));
       const role = getUserRole();
       if(role === 'club-admin') {
-        navigate('/add-event');
+        navigate('/adminDashboard');
       } else {
         navigate('/');
       }

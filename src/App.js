@@ -1,4 +1,6 @@
 
+import { useEffect } from 'react';
+import { isAuthenticated, logout } from './utils/auth';
 import './App.css';
 import Navbar from './components/Navbar';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -9,6 +11,16 @@ import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      logout();
+      // Optionally redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+  }, []);
+
   return (
     <Router>
       <Navbar />
@@ -17,7 +29,7 @@ function App() {
         <Route path="/events" element={<AllEventsPage />} />
         <Route path="/event/:eventId" element={<ViewEvent />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/add-event" element={<AdminDashboard />} />
+        <Route path="/admindashboard" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );
