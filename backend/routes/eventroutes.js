@@ -12,8 +12,22 @@ router.post('/create', (req, res, next) => {
     next();
   }, protect, upload.single('poster'), eventController.createEvent);
 
-router.post('/create', protect, upload.single('poster'), eventController.createEvent);
+
+// Get user's events
 router.get('/my-events', protect, eventController.getMyEvents);
+
+// Update event
+router.put('/:id', (req, res, next) => {
+  console.log('Incoming PUT /api/events/:id', {
+    params: req.params,
+    body: req.body,
+    file: req.file ? 'File present' : 'No file'
+  });
+  next();
+}, protect, upload.single('poster'), eventController.updateEvent);
+
+// Delete event
 router.delete('/:id', protect, eventController.deleteEvent);
 
 module.exports = router;
+

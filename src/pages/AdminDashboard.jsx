@@ -24,6 +24,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import axiosInstance from '../utils/axiosConfig';
 
+
 function TabPanel({ children, value, index, ...other }) {
   return (
     <div
@@ -48,6 +49,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [myEvents, setMyEvents] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentEventId, setCurrentEventId] = useState(null);
   const submissionInProgress = useRef(false);
 
   // Form state for adding events
@@ -78,10 +81,19 @@ const AdminDashboard = () => {
     setEventForm(prev => ({ ...prev, [name]: value }));
   };
 
+  const fileInputRef = useRef(null);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setEventForm(prev => ({ ...prev, posterFile: file }));
+      // Create a new File object to ensure we have a fresh reference
+      const newFile = new File([file], file.name, {
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
+      setEventForm(prev => ({ ...prev, posterFile: newFile }));
+      
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -115,6 +127,28 @@ const AdminDashboard = () => {
     return true;
   };
 
+  const resetForm = () => {
+    setEventForm({
+      title: '',
+      description: '',
+      longDescription: '',
+      dateTime: '',
+      location: '',
+      price: '',
+      posterFile: null,
+      coordinators: [
+        { name: '', contact: '', required: true },
+        { name: '', contact: '', required: false }
+      ]
+    });
+    setPosterPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setIsEditing(false);
+    setCurrentEventId(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -134,50 +168,67 @@ const AdminDashboard = () => {
 
     try {
       const formData = new FormData();
-      Object.keys(eventForm).forEach(key => {
-        if (key === 'coordinators') {
-          formData.append(key, JSON.stringify(eventForm[key]));
-        } else if (key === 'posterFile' && eventForm[key]) {
-          formData.append('poster', eventForm[key]);
-        } else if (key !== 'posterFile') {
-          formData.append(key, eventForm[key]);
-        }
-      });
-
-      // Assume the request is successful if it doesn't throw an error.
-      await axiosInstance.post('/events/create', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      // The single source of truth for success handling:
-      setMessage({ type: 'success', text: 'Event created successfully!' });
-      setEventForm({
-        title: '',
-        description: '',
-        longDescription: '',
-        dateTime: '',
-        location: '',
-        price: '',
-        posterFile: null,
-        coordinators: [
-          { name: '', contact: '', required: true },
-          { name: '', contact: '', required: false }
-        ]
-      });
-      setPosterPreview(null);
-      const fileInput = document.querySelector('input[type="file"]');
-      if (fileInput) {
-        fileInput.value = '';
+      
+      // Always include all required fields, using existing values if not in eventForm
+      formData.append('title', eventForm.title || '');
+      formData.append('description', eventForm.description || '');
+      formData.append('longDescription', eventForm.longDescription || '');
+      formData.append('dateTime', eventForm.dateTime || '');
+      formData.append('location', eventForm.location || '');
+      formData.append('price', eventForm.price || 0);
+      
+      // Handle coordinators
+      if (eventForm.coordinators) {
+        formData.append('coordinators', JSON.stringify(eventForm.coordinators));
+      }
+      
+      // Handle poster file if present
+      if (eventForm.posterFile) {
+        formData.append('poster', eventForm.posterFile);
       }
 
+      let response;
+      if (isEditing && currentEventId) {
+        // Update existing event
+        response = await axiosInstance.put(`/events/${currentEventId}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          validateStatus: (status) => status < 500 // Don't throw for 4xx errors
+        });
+        
+        if (response.status >= 200 && response.status < 300) {
+          setMessage({ type: 'success', text: 'Event updated successfully!' });
+        } else {
+          // If there was an error, we'll throw it to be caught by the catch block
+          throw new Error(response.data?.message || 'Failed to update event');
+        }
+      } else {
+        // Create new event
+        response = await axiosInstance.post('/events/create', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          validateStatus: (status) => status < 500 // Don't throw for 4xx errors
+        });
+        
+        if (response.status >= 200 && response.status < 300) {
+          setMessage({ type: 'success', text: 'Event created successfully!' });
+        } else {
+          throw new Error(response.data?.message || 'Failed to create event');
+        }
+      }
+
+      resetForm();
+      setTabValue(1); // Switch to My Events tab
+      fetchMyEvents(); // Refresh the events list
+
     } catch (error) {
-      console.error('Event creation error:', error);
-      // The catch block is now ONLY for actual errors.
+      console.error(isEditing ? 'Event update error:' : 'Event creation error:', error);
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Failed to create event. Please try again.'
+        text: error.response?.data?.message || 
+          (isEditing ? 'Failed to update event. Please try again.' : 'Failed to create event. Please try again.')
       });
     } finally {
       setLoading(false);
@@ -200,12 +251,67 @@ const AdminDashboard = () => {
     }
   };
 
+  const editEvent = async (eventId) => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(`/events/my-events`);
+      const eventToEdit = response.data.find(event => event._id === eventId);
+      
+      if (!eventToEdit) {
+        setMessage({ type: 'error', text: 'Event not found' });
+        return;
+      }
+
+      // Format the date for the datetime-local input
+      const eventDate = new Date(eventToEdit.dateTime);
+      const formattedDate = eventDate.toISOString().slice(0, 16);
+
+      setEventForm({
+        title: eventToEdit.title,
+        description: eventToEdit.description,
+        longDescription: eventToEdit.longDescription,
+        dateTime: formattedDate,
+        location: eventToEdit.location,
+        price: eventToEdit.price,
+        posterFile: null, // We'll handle the preview separately
+        coordinators: eventToEdit.coordinators.length > 0 
+          ? eventToEdit.coordinators 
+          : [
+              { name: '', contact: '', required: true },
+              { name: '', contact: '', required: false }
+            ]
+      });
+
+      // Set the poster preview if it exists
+      if (eventToEdit.posterUrl) {
+        setPosterPreview(eventToEdit.posterUrl);
+      }
+
+      setIsEditing(true);
+      setCurrentEventId(eventId);
+      setTabValue(0); // Switch to Add Event tab
+    } catch (error) {
+      console.error('Error fetching event for edit:', error);
+      setMessage({
+        type: 'error',
+        text: 'Failed to load event for editing. Please try again.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteEvent = async (eventId) => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         await axiosInstance.delete(`/events/${eventId}`);
         setMessage({ type: 'success', text: 'Event deleted successfully!' });
         fetchMyEvents();
+        
+        // If we're editing this event, reset the form
+        if (currentEventId === eventId) {
+          resetForm();
+        }
       } catch (error) {
         setMessage({
           type: 'error',
@@ -248,9 +354,24 @@ const AdminDashboard = () => {
 
           {/* Add Event Tab */}
           <TabPanel value={tabValue} index={0}>
-            <Typography variant="h5" gutterBottom sx={{ color: '#003285' }}>
-              Create New Event
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h5" sx={{ color: '#003285' }}>
+                {isEditing ? 'Edit Event' : 'Create New Event'}
+              </Typography>
+              {isEditing && (
+                <Button 
+                  variant="outlined" 
+                  color="secondary"
+                  onClick={() => {
+                    resetForm();
+                    setMessage({ type: '', text: '' });
+                  }}
+                  size="small"
+                >
+                  Cancel Edit
+                </Button>
+              )}
+            </Box>
 
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <Grid container spacing={3}>
@@ -287,8 +408,8 @@ const AdminDashboard = () => {
                 </Grid>
 
                 {/* Third Row: Date & Time, Location, Price, Poster Upload */}
-                <Grid item xs={12} container spacing={3}>
-                  <Grid item xs={12} md={3}>
+                <Grid container item xs={12} spacing={3}>
+                  <Grid xs={12} md={3}>
                     <TextField
                       fullWidth
                       required
@@ -302,7 +423,7 @@ const AdminDashboard = () => {
                       InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid xs={12} md={3}>
                     <TextField
                       fullWidth
                       required
@@ -314,7 +435,7 @@ const AdminDashboard = () => {
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid xs={12} md={3}>
                     <TextField
                       fullWidth
                       required
@@ -327,14 +448,15 @@ const AdminDashboard = () => {
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid xs={12} md={3}>
                     <Box>
                       <input
+                        type="file"
                         accept="image/*"
+                        onChange={handleFileChange}
                         style={{ display: 'none' }}
                         id="poster-upload"
-                        type="file"
-                        onChange={handleFileChange}
+                        ref={fileInputRef}
                       />
                       <label htmlFor="poster-upload">
                         <Button
@@ -385,13 +507,13 @@ const AdminDashboard = () => {
 
               {/* Coordinators Section */}
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid xs={12}>
                   <Typography variant="h6" gutterBottom sx={{ color: '#003285' }}>
                     Event Coordinators
                   </Typography>
                   {eventForm.coordinators.map((coordinator, index) => (
                     <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={6}>
+                      <Grid xs={12} md={6}>
                         <TextField
                           fullWidth
                           required={index === 0} // Only first coordinator is required
@@ -402,7 +524,7 @@ const AdminDashboard = () => {
                           size="small"
                         />
                       </Grid>
-                      <Grid item xs={12} md={6}>
+                      <Grid xs={12} md={6}>
                         <TextField
                           fullWidth
                           required={index === 0} // Only first coordinator is required
@@ -435,7 +557,7 @@ const AdminDashboard = () => {
                     py: 1.5
                   }}
                 >
-                  {loading ? <CircularProgress size={24} /> : 'Create Event'}
+                  {loading ? <CircularProgress size={24} /> : (isEditing ? 'Update Event' : 'Create Event')}
                 </Button>
               </Box>
             </Box>
@@ -454,14 +576,14 @@ const AdminDashboard = () => {
             ) : (
               <Grid container spacing={3}>
                 {myEvents.length === 0 ? (
-                  <Grid item xs={12}>
+                  <Grid xs={12}>
                     <Typography variant="body1" color="text.secondary" textAlign="center">
                       No events created yet. Create your first event using the "Add Event" tab.
                     </Typography>
                   </Grid>
                 ) : (
                   myEvents.map((event) => (
-                    <Grid item xs={12} md={6} lg={4} key={event._id}>
+                    <Grid xs={12} md={6} lg={4} key={event._id}>
                       <Card elevation={2}>
                         <CardContent>
                           <Typography variant="h6" component="h2" gutterBottom>
@@ -504,7 +626,13 @@ const AdminDashboard = () => {
                           >
                             Delete
                           </Button>
-                          
+                          <Button
+                            size="small"
+                            color="primary"
+                            onClick={() => editEvent(event._id)}
+                          >
+                            Edit
+                          </Button>
                         </CardActions>
                       </Card>
                     </Grid>
