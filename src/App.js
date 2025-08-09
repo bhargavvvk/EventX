@@ -14,10 +14,6 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated()) {
       logout();
-      // Optionally redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
     }
   }, []);
 
