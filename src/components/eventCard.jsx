@@ -15,15 +15,21 @@ const EventCard = ({ id, image, title, description, dateTime, location, price, h
         className="card-img-top"
         alt={title}
         style={{
-          height: '200px',
+          height: '300px',
           width: '100%',
           objectFit: 'contain',
-          backgroundColor: '#7895CB' // Optional: Helps when image doesn't fill the area
+          backgroundColor: '#7895CB' 
         }}
       />
       <div className="card-body">
         <h5 className="card-title fw-bold">{title}</h5>
-        <p className="card-text text-muted">{description}</p>
+        <p className="card-text text-muted" style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,       
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            minHeight: '3rem'         
+          }} >{description}</p>
         <p className="card-text"><small className="text-muted">Hosted by: {hostedBy}</small></p>
       </div>
       <ul className="list-group list-group-flush">

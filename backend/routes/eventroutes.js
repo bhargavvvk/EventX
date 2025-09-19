@@ -13,8 +13,14 @@ router.post('/create', (req, res, next) => {
   }, protect, upload.single('poster'), eventController.createEvent);
 
 
+// Get all events (must come before /:id route)
+router.get('/', eventController.getEvents);
+
 // Get user's events
 router.get('/my-events', protect, eventController.getMyEvents);
+
+// Get event by ID (must come after specific routes)
+router.get('/:id', eventController.getEventById);
 
 // Update event
 router.put('/:id', (req, res, next) => {
@@ -28,6 +34,7 @@ router.put('/:id', (req, res, next) => {
 
 // Delete event
 router.delete('/:id', protect, eventController.deleteEvent);
+
 
 module.exports = router;
 

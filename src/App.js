@@ -9,15 +9,12 @@ import AllEventsPage from './pages/AllEventsPage';
 import ViewEvent from './pages/ViewEvent';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import BookNow from './pages/BookNow';
 
 function App() {
   useEffect(() => {
     if (!isAuthenticated()) {
       logout();
-      // Optionally redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
     }
   }, []);
 
@@ -28,6 +25,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/events" element={<AllEventsPage />} />
         <Route path="/event/:eventId" element={<ViewEvent />} />
+        <Route path="/book/:eventId" element={<BookNow />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
       </Routes>

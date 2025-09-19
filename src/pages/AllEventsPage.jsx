@@ -1,18 +1,57 @@
 // pages/AllEventsPage.jsx
 import React from 'react';
 import EventCard from '../components/eventCard';
-import eventsData from '../data/events.json';
+import { useState, useEffect } from 'react';
+import axiosInstance from '../utils/axiosConfig';
+import { Link } from 'react-router-dom';
 
 const AllEventsPage = () => {
-  const allEvents = eventsData.allEvents;
-  
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    const fetchEvents = async () => {
+      try{
+        const res = await axiosInstance.get('/events?sort=recent');
+        if(mounted){
+          setEvents(res.data);
+        }
+      }
+      catch(error){
+        console.error('Error fetching events:', error);
+      }
+      finally{
+        if(mounted){
+          setLoading(false);
+        }
+      }
+    };
+    fetchEvents();
+    return () => {
+      mounted = false;
+    }
+  },[])
+  if (loading) return <p>Loading...</p>;
   return (
-    <div className="p-6">
-    <h4 className="fw-bold mb-4 text-center mt-3">ALL EVENTS</h4>
+    <div className="container mt-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h4 className="fw-bold">TRENDING EVENTS</h4>
+        <Link to="/events" className="btn btn-outline-dark viewallbtn">View All</Link>
+      </div>
+
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-        {allEvents.map((event) => (
-          <div key={event.id} className="col">
-            <EventCard {...event} />
+        {events.map((event) => (
+          <div key={event._id} className="col">
+            <EventCard 
+              id={event._id}
+              image={event.posterUrl}
+              title={event.title}
+              description={event.description}
+              dateTime={new Date(event.dateTime).toLocaleString()}
+              location={event.location}
+              price={event.price}
+              hostedBy={event.hostedBy.name}
+            />
           </div>
         ))}
       </div>

@@ -1,10 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import EventCard from './eventCard'; // make sure path is correct
-import eventsData from '../data/events.json';
+import { useState,useEffect} from 'react';
+import axiosInstance from '../utils/axiosConfig';
 
 const TrendingEvents = () => {
-  const trendingEvents = eventsData.trendingEvents;
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    const fetchEvents = async () => {
+      try{
+        const res = await axiosInstance.get('/events?sort=recent&limit=8');
+        if(mounted){
+          setEvents(res.data);
+        }
+      }
+      catch(error){
+        console.error('Error fetching events:', error);
+      }
+      finally{
+        if(mounted){
+          setLoading(false);
+        }
+      }
+    };
+    fetchEvents();
+    return () => {
+      mounted = false;
+    }
+  },[])
+  if (loading) return <p>Loading...</p>;
   
   return (
     <div className="container mt-5">
@@ -14,9 +40,18 @@ const TrendingEvents = () => {
       </div>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-        {trendingEvents.map((event) => (
-          <div key={event.id} className="col">
-            <EventCard {...event} />
+        {events.map((event) => (
+          <div key={event._id} className="col">
+            <EventCard 
+              id={event._id}
+              image={event.posterUrl}
+              title={event.title}
+              description={event.description}
+              dateTime={new Date(event.dateTime).toLocaleString()}
+              location={event.location}
+              price={event.price}
+              hostedBy={event.hostedBy.name}
+            />
           </div>
         ))}
       </div>
