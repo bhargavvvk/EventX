@@ -7,7 +7,7 @@ const EventSchema = new mongoose.Schema({
   },
   hostedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Club', // Or 'User'
+    ref: 'Club',
     required: true
   },
   description: {

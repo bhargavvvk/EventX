@@ -342,3 +342,33 @@ exports.deleteEvent = async (req, res) => {
     res.status(500).json({ message: 'Error deleting event' });
   }
 };
+
+exports.getEvents=async(req,res)=>{
+  try{
+    const limit = parseInt(req.query.limit) || 0;
+    const sortField = req.query.sort === 'recent' ? { createdAt: -1 } : {};
+    
+    const events = await Event.find()
+      .populate('hostedBy', 'name description')
+      .sort(sortField)
+      .limit(limit);
+    res.json(events);
+  }
+  catch(error){
+    console.error('GET Events Error:', error);
+    res.status(500).json({message:"Server error fetching events"});
+  }
+};
+
+
+exports.getEventById=async(req,res)=>{
+  try{
+    const event=await Event.findById(req.params.id).populate('hostedBy', 'name description');
+    if(!event) return res.status(404).json({message:"Event not found"});
+    res.json(event);
+  }
+  catch(error){
+    console.error(error);
+    res.status(500).json({message:"Server error fetching event"});
+  }
+};

@@ -4,6 +4,10 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/dbConnection'); 
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/eventroutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+
+// Import models to register them
+require('./models/Club');
 
 
 
@@ -13,7 +17,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/api/events', eventRoutes);
-app.use('/api/auth', authRoutes); 
+app.use('/api/auth', authRoutes);
+app.use('/api/bookings', bookingRoutes); 
 
 const PORT = process.env.PORT || 5001;
 // Global error handler
