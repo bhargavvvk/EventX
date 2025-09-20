@@ -109,8 +109,8 @@ const ViewEvent = () => {
                Book Now
               </button>
             )}
-            <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate(-1)}>
-              Go Back
+            <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate('/login')}>
+              Login
             </button>
           </div>
         </div>
