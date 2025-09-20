@@ -21,8 +21,23 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'Invalid token structure' });
       }
       
+      // Try to find user in database
       req.user = await User.findById(userId).select('-password');
       console.log('User found in middleware:', req.user);
+      
+      // If user not found in database but token is valid, use token data
+      if (!req.user && decoded.user) {
+        console.log('User not found in DB, using token data');
+        req.user = {
+          _id: decoded.user._id,
+          username: decoded.user.username,
+          role: decoded.user.role
+        };
+      }
+      
+      if (!req.user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
 
       next();
     } catch (error) {

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const { validationResult } = require('express-validator');
+const { sendBookingConfirmationEmail } = require('../utils/mailer'); // ✅ added mailer import
+const ExcelJS = require('exceljs');
 
 // Create a new booking
 const createBooking = async (req, res) => {
@@ -45,12 +47,42 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check if user already booked this event
-    const existingBooking = await Booking.findOne({ eventId, email });
-    if (existingBooking) {
-      return res.status(409).json({
+    // Get user ID from authenticated user
+    const userId = req.user?._id || req.body.userId; // Fallback to body if needed for testing
+    
+    // Debug log (remove in production)
+    console.log('User from request:', { 
+      user: req.user, 
+      userId,
+      headers: req.headers,
+      body: req.body 
+    });
+
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: 'You have already booked this event'
+        message: 'Authentication required. Please log in to book an event.',
+        error: 'MISSING_USER_ID'
+      });
+    }
+
+    // Check if user already booked this event using userId
+    try {
+      const existingBooking = await Booking.findOne({ eventId, userId });
+      if (existingBooking) {
+        return res.status(409).json({
+          success: false,
+          message: 'You have already booked this event',
+          error: 'DUPLICATE_BOOKING',
+          bookingId: existingBooking.bookingId
+        });
+      }
+    } catch (error) {
+      console.error('Error checking for existing booking:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error checking booking status',
+        error: 'BOOKING_CHECK_ERROR'
       });
     }
 
@@ -70,9 +102,10 @@ const createBooking = async (req, res) => {
       return `BK${timestamp}${random}`.toUpperCase();
     };
 
-    // Create new booking
+    // Create new booking with user reference
     const booking = new Booking({
       eventId,
+      userId, // Add user reference
       fullName,
       email,
       phone,
@@ -82,20 +115,63 @@ const createBooking = async (req, res) => {
       department,
       section,
       year,
+      status: 'confirmed',
+      bookingDate: new Date(),
       bookingId: generateBookingId() // Explicitly set bookingId
     });
 
     try {
       await booking.save();
     } catch (saveError) {
-      // If save fails due to duplicate bookingId (very rare), retry once
-      if (saveError.code === 11000 && saveError.keyPattern && saveError.keyPattern.bookingId) {
-        booking.bookingId = generateBookingId();
-        await booking.save();
+      console.error('Booking save error:', saveError);
+      
+      // Handle different types of duplicate key errors
+      if (saveError.code === 11000) {
+        if (saveError.keyPattern && saveError.keyPattern.bookingId) {
+          // Duplicate bookingId (very rare), retry once
+          booking.bookingId = generateBookingId();
+          await booking.save();
+        } else if (saveError.keyPattern && saveError.keyPattern.eventId && saveError.keyPattern.userId) {
+          // Duplicate user booking for this event
+          return res.status(409).json({
+            success: false,
+            message: 'You have already booked this event',
+            error: 'DUPLICATE_USER_BOOKING'
+          });
+        } else if (saveError.keyPattern && saveError.keyPattern.eventId && saveError.keyPattern.email) {
+          // Duplicate email booking for this event (legacy index)
+          return res.status(409).json({
+            success: false,
+            message: 'This email address has already been used to book this event',
+            error: 'DUPLICATE_EMAIL_BOOKING'
+          });
+        } else if (saveError.keyPattern && saveError.keyPattern.rollNumber && saveError.keyPattern.eventId) {
+          // Duplicate roll number for this event
+          return res.status(409).json({
+            success: false,
+            message: 'This roll number has already been used to book this event',
+            error: 'DUPLICATE_ROLL_NUMBER'
+          });
+        } else {
+          // Other duplicate key error
+          return res.status(409).json({
+            success: false,
+            message: 'Duplicate booking detected',
+            error: 'DUPLICATE_BOOKING_ERROR'
+          });
+        }
       } else {
         throw saveError;
       }
     }
+
+    // ✅ Send booking confirmation email
+    await sendBookingConfirmationEmail({
+      to: booking.email,
+      name: booking.fullName,
+      event: event,
+      bookingId: booking.bookingId
+    });
 
     // Populate event details for response
     await booking.populate('eventId', 'title dateTime location price');
@@ -158,65 +234,78 @@ const getBookingById = async (req, res) => {
 const getEventBookings = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { export: exportType } = req.query;
 
     const bookings = await Booking.find({ eventId })
       .populate('eventId', 'title dateTime location')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .sort({ createdAt: -1 });
 
-    const total = await Booking.countDocuments({ eventId });
+    if (exportType === 'excel') {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Bookings');
 
-    res.status(200).json({
-      success: true,
-      data: {
-        bookings,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page,
-        total
-      }
-    });
+      // Add headers
+      sheet.addRow([
+        'Booking ID', 'Full Name', 'Email', 'Phone', 'Roll Number',
+        'College', 'Department', 'Section', 'Year', 'Created At'
+      ]);
+
+      // Add data rows
+      bookings.forEach(b => {
+        sheet.addRow([
+          b.bookingId, b.fullName, b.email, b.phone, b.rollNumber,
+          b.college, b.department, b.section, b.year,
+          b.createdAt.toLocaleString()
+        ]);
+      });
+
+      // Send as download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=bookings.xlsx');
+
+      await workbook.xlsx.write(res);
+      return res.end();
+    }
+
+    // Normal JSON response
+    res.status(200).json({ success: true, data: { bookings } });
 
   } catch (error) {
     console.error('Error fetching event bookings:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
 // Get user's bookings
 const getUserBookings = async (req, res) => {
   try {
-    const { email } = req.query;
-
-    if (!email) {
-      return res.status(400).json({
+    // Get user ID from authenticated user
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: 'Email is required'
+        message: 'User not authenticated'
       });
     }
 
-    const bookings = await Booking.find({ email })
-      .populate('eventId')
-      .sort({ createdAt: -1 });
+    const bookings = await Booking.find({ userId })
+      .populate('eventId', 'title dateTime location price posterUrl')
+      .sort({ bookingDate: -1 });
 
     res.status(200).json({
       success: true,
-      data: { bookings }
+      count: bookings.length,
+      data: bookings
     });
-
   } catch (error) {
     console.error('Error fetching user bookings:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Server error while fetching bookings',
+      error: error.message
     });
   }
 };
-
 
 // Get booking statistics for an event
 const getBookingStats = async (req, res) => {

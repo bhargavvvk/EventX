@@ -22,7 +22,9 @@ import AddIcon from '@mui/icons-material/Add';
 import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import PeopleIcon from '@mui/icons-material/People';
 import axiosInstance from '../utils/axiosConfig';
+import EventBookings from './EventBookings';
 
 
 function TabPanel({ children, value, index, ...other }) {
@@ -51,6 +53,7 @@ const AdminDashboard = () => {
   const [myEvents, setMyEvents] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentEventId, setCurrentEventId] = useState(null);
+  const [selectedEventForBookings, setSelectedEventForBookings] = useState(null);
   const submissionInProgress = useRef(false);
 
   // Form state for adding events
@@ -73,6 +76,9 @@ const AdminDashboard = () => {
     setTabValue(newValue);
     if (newValue === 1) {
       fetchMyEvents();
+    }
+    if (newValue === 2) {
+      fetchMyEvents(); // Need events list for bookings tab
     }
   };
 
@@ -349,6 +355,12 @@ const AdminDashboard = () => {
                 id="admin-tab-1"
                 aria-controls="admin-tabpanel-1"
               />
+              <Tab
+                icon={<PeopleIcon />}
+                label="Event Registrations"
+                id="admin-tab-2"
+                aria-controls="admin-tabpanel-2"
+              />
             </Tabs>
           </Box>
 
@@ -621,10 +633,13 @@ const AdminDashboard = () => {
                           </Button>
                           <Button
                             size="small"
-                            color="error"
-                            onClick={() => deleteEvent(event._id)}
+                            color="secondary"
+                            onClick={() => {
+                              setSelectedEventForBookings(event._id);
+                              setTabValue(2);
+                            }}
                           >
-                            Delete
+                            Registrations
                           </Button>
                           <Button
                             size="small"
@@ -633,12 +648,72 @@ const AdminDashboard = () => {
                           >
                             Edit
                           </Button>
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => deleteEvent(event._id)}
+                          >
+                            Delete
+                          </Button>
                         </CardActions>
                       </Card>
                     </Grid>
                   ))
                 )}
               </Grid>
+            )}
+          </TabPanel>
+
+          {/* Event Registrations Tab */}
+          <TabPanel value={tabValue} index={2}>
+            {selectedEventForBookings ? (
+              <EventBookings eventId={selectedEventForBookings} />
+            ) : (
+              <Box>
+                <Typography variant="h5" gutterBottom sx={{ color: '#003285' }}>
+                  Event Registrations
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Select an event from "My Events" tab to view its registrations.
+                </Typography>
+                
+                {myEvents.length > 0 && (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Quick Access:
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {myEvents.map((event) => (
+                        <Grid xs={12} md={6} lg={4} key={event._id}>
+                          <Card 
+                            elevation={1} 
+                            sx={{ cursor: 'pointer', '&:hover': { elevation: 3 } }}
+                            onClick={() => setSelectedEventForBookings(event._id)}
+                          >
+                            <CardContent>
+                              <Typography variant="h6" component="h3" gutterBottom>
+                                {event.title}
+                              </Typography>
+                              <Box display="flex" alignItems="center" mb={1}>
+                                <CalendarTodayIcon fontSize="small" sx={{ mr: 1, color: '#003285' }} />
+                                <Typography variant="body2">
+                                  {new Date(event.dateTime).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                              <Box display="flex" alignItems="center">
+                                <LocationOnIcon fontSize="small" sx={{ mr: 1, color: '#003285' }} />
+                                <Typography variant="body2">
+                                  {event.location}
+                                </Typography>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Box>
+                )}
+              </Box>
             )}
           </TabPanel>
         </Paper>

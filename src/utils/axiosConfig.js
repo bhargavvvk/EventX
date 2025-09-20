@@ -11,15 +11,13 @@ const axiosInstance = axios.create({
   maxRedirects: 0,
 });
 
-// Add request interceptor to include auth token and check validity
+// Add request interceptor to include auth token
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Check if token is valid before making request
-    if (isTokenValid()) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    // Always try to attach token if it exists
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },

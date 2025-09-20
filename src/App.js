@@ -10,6 +10,8 @@ import ViewEvent from './pages/ViewEvent';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import BookNow from './pages/BookNow';
+import UserBookings from './pages/UserBookings';
+import EventBookings from './pages/EventBookings';
 
 function App() {
   useEffect(() => {
@@ -28,6 +30,8 @@ function App() {
         <Route path="/book/:eventId" element={<BookNow />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
+        <Route path="/userbookings" element={<UserBookings />} />
+        <Route path="/admin/event/:eventId/bookings" element={<EventBookings />} />
       </Routes>
     </Router>
   );

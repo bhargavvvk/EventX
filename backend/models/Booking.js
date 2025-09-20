@@ -6,6 +6,11 @@ const BookingSchema = new mongoose.Schema({
     ref: 'Event',
     required: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   // Personal Information
   fullName: {
     type: String,
@@ -82,8 +87,9 @@ BookingSchema.pre('save', function(next) {
 });
 
 // Index for faster queries
-BookingSchema.index({ eventId: 1, email: 1 }, { unique: true }); // Prevent duplicate bookings
+BookingSchema.index({ eventId: 1, userId: 1 }, { unique: true }); // Prevent duplicate bookings per user
+BookingSchema.index({ eventId: 1, email: 1 }); // For email lookup (non-unique)
 BookingSchema.index({ bookingId: 1 });
-BookingSchema.index({ rollNumber: 1, eventId: 1 });
+BookingSchema.index({ rollNumber: 1, eventId: 1 }, { unique: true }); // Prevent duplicate roll numbers per event
 
 module.exports = mongoose.model('Booking', BookingSchema);

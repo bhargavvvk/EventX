@@ -85,7 +85,7 @@ const Navbar = () => {
                 {isLoggedIn && role === 'user' && (
                   <>
                     <li>
-                      <Link className="dropdown-item" to="/my-events">Registered Events</Link>
+                      <Link className="dropdown-item" to="/userbookings">Registered Events</Link>
                     </li>
                     <li><hr className="dropdown-divider" /></li>
                     <li>
@@ -94,9 +94,15 @@ const Navbar = () => {
                   </>
                 )}
                 {isLoggedIn && role === 'club-admin' && (
-                  <li>
-                    <button className="dropdown-item" onClick={handleLogout}>Logout</button>
-                  </li>
+                  <>
+                    <li>
+                      <Link className="dropdown-item" to="/admindashboard">Admin Dashboard</Link>
+                    </li>
+                    <li><hr className="dropdown-divider" /></li>
+                    <li>
+                      <button className="dropdown-item" onClick={handleLogout}>Logout</button>
+                    </li>
+                  </>
                 )}
               </ul>
             </div>

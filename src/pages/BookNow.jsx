@@ -18,6 +18,7 @@ import {
   CardContent
 } from '@mui/material';
 import axiosInstance from '../utils/axiosConfig';
+import { isAuthenticated } from '../utils/auth';
 
 const BookNow = () => {
   const { eventId } = useParams();
@@ -42,8 +43,15 @@ const BookNow = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Fetch event data
+  // Check authentication and fetch event data
   useEffect(() => {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      // Redirect to login with return URL
+      navigate(`/login?redirect=/book/${eventId}`);
+      return;
+    }
+
     const fetchEvent = async () => {
       try {
         const response = await axiosInstance.get(`/events/${eventId}`);
@@ -59,7 +67,7 @@ const BookNow = () => {
     if (eventId) {
       fetchEvent();
     }
-  }, [eventId]);
+  }, [eventId, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -116,6 +124,8 @@ const BookNow = () => {
         year: formData.year
       });
 
+      // Store booking details from response for confirmation
+      console.log('Booking successful:', response.data);
       setSubmitSuccess(true);
       
       // Reset form after successful submission
@@ -129,7 +139,13 @@ const BookNow = () => {
       if (error.response) {
         const { status, data } = error.response;
         
-        if (status === 409) {
+        if (status === 401) {
+          setErrors({ submit: 'Authentication required. Please log in to book an event.' });
+          // Redirect to login after a short delay
+          setTimeout(() => {
+            navigate(`/login?redirect=/book/${eventId}`);
+          }, 2000);
+        } else if (status === 409) {
           setErrors({ submit: data.message });
         } else if (status === 400 && data.errors) {
           const fieldErrors = {};
@@ -214,22 +230,22 @@ const BookNow = () => {
               {event.title}
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="body2">
                   <strong>Date & Time:</strong> {new Date(event.dateTime).toLocaleString()}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="body2">
                   <strong>Location:</strong> {event.location}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="body2">
                   <strong>Price:</strong> ₹{event.price}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography variant="body2">
                   <strong>Hosted by:</strong> {event.hostedBy?.name || event.hostedBy}
                 </Typography>
@@ -252,7 +268,7 @@ const BookNow = () => {
           </Typography>
           
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Full Name"
@@ -267,7 +283,7 @@ const BookNow = () => {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Email Address"
@@ -283,7 +299,7 @@ const BookNow = () => {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Phone Number"
@@ -298,7 +314,7 @@ const BookNow = () => {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Roll Number"
@@ -319,7 +335,7 @@ const BookNow = () => {
           </Typography>
           
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth variant="outlined" error={!!errors.degree} sx={{ height: '56px', minWidth: '200px', '& .MuiOutlinedInput-root': { height: '56px' } }}>
                 <InputLabel>Degree</InputLabel>
                 <Select
@@ -356,7 +372,7 @@ const BookNow = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth variant="outlined" error={!!errors.college} sx={{ height: '56px', minWidth: '200px', '& .MuiOutlinedInput-root': { height: '56px' } }}>
                 <InputLabel>College</InputLabel>
                 <Select
@@ -391,7 +407,7 @@ const BookNow = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth variant="outlined" error={!!errors.department} sx={{ height: '56px', minWidth: '200px', '& .MuiOutlinedInput-root': { height: '56px' } }}>
                 <InputLabel>Department</InputLabel>
                 <Select
@@ -434,7 +450,7 @@ const BookNow = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
                 label="Section"
@@ -451,7 +467,7 @@ const BookNow = () => {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <FormControl fullWidth variant="outlined" error={!!errors.year} sx={{ height: '56px', minWidth: '200px', '& .MuiOutlinedInput-root': { height: '56px' } }}>
                 <InputLabel>Year of Study</InputLabel>
                 <Select
