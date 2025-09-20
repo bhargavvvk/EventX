@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { isTokenValid, logout } from './auth';
+import { logout } from './auth';
 
 // Create axios instance with proper configuration
 const axiosInstance = axios.create({

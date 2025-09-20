@@ -3,7 +3,6 @@ import React from 'react';
 import EventCard from '../components/eventCard';
 import { useState, useEffect } from 'react';
 import axiosInstance from '../utils/axiosConfig';
-import { Link } from 'react-router-dom';
 
 const AllEventsPage = () => {
   const [events, setEvents] = useState([]);

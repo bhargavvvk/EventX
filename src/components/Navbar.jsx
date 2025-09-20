@@ -13,8 +13,6 @@ const Navbar = () => {
       navigate("/login");
     } else if (isAdmin()) {
       navigate("/admindashboard");
-    } else {
-      alert("Only admins can list events.");
     }
   };
 
@@ -50,13 +48,13 @@ const Navbar = () => {
           <div className="d-flex align-items-center gap-3">
 
             {/* List Event */}
-            <button
+            {(!isLoggedIn || isUserAdmin) && (<button
               className="nav-link text-white btn btn-link p-0 border-0"
               onClick={handleAddEventClick}
               style={{ background: 'none', textDecoration: 'none' }}
             >
               List your event
-            </button>
+            </button>)}
 
             {/* Profile Dropdown */}
             <div className="dropdown">
