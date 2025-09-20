@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const { protect } = require('../middleware/authMiddleware');
 const {
   createBooking,
   getBookingById,
@@ -54,8 +55,8 @@ const bookingValidation = [
 
 // Routes
 
-// POST /api/bookings/event/:eventId - Create a new booking
-router.post('/event/:eventId', bookingValidation, createBooking);
+// POST /api/bookings/event/:eventId - Create a new booking (requires authentication)
+router.post('/event/:eventId', protect, bookingValidation, createBooking);
 
 // GET /api/bookings/:bookingId - Get booking by booking ID
 router.get('/:bookingId', getBookingById);
@@ -69,11 +70,10 @@ router.get('/event/:eventId', (req, res) => {
 });
 
 // GET /api/bookings/event/:eventId/all - Get all bookings for an event (Admin)
-router.get('/event/:eventId/all', getEventBookings);
+router.get('/event/:eventId/all', protect, getEventBookings);
 
-// GET /api/bookings/user - Get user's bookings
-router.get('/user/bookings', getUserBookings);
-
+// GET /api/bookings/user - Get user's bookings (requires authentication)
+router.get('/user/bookings', protect, getUserBookings);
 
 // GET /api/bookings/event/:eventId/stats - Get booking statistics
 router.get('/event/:eventId/stats', getBookingStats);

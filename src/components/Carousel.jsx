@@ -68,7 +68,6 @@ export default function PosterCarousel() {
             centeredSlides={true}
             initialSlide={2}
             loop={true}
-            loopedSlides={events.length}
             autoplay={{
               delay: 70000,
               disableOnInteraction: false,
@@ -138,7 +137,7 @@ export default function PosterCarousel() {
           </div>
         </div>
 
-        <style jsx>{`
+        <style>{`
           .container2 {
             padding: 15px;
           }

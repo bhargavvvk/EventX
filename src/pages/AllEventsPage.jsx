@@ -35,8 +35,7 @@ const AllEventsPage = () => {
   return (
     <div className="container mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h4 className="fw-bold">TRENDING EVENTS</h4>
-        <Link to="/events" className="btn btn-outline-dark viewallbtn">View All</Link>
+        <h4 className="fw-bold">EVENTS</h4>
       </div>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
