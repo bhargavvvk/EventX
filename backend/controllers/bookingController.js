@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const { validationResult } = require('express-validator');
-const { sendBookingConfirmationEmail } = require('../utils/mailer'); // ✅ added mailer import
+const { sendBookingConfirmationEmail } = require('../utils/mailer');
+const { checkForDuplicateBookings, createBooking: createBookingUtil } = require('../utils/bookingUtils');
 const ExcelJS = require('exceljs');
 
 // Create a new booking
@@ -28,7 +29,10 @@ const createBooking = async (req, res) => {
       college,
       department,
       section,
-      year
+      year,
+      paymentId = null,
+      orderId = null,
+      paymentAmount = 0
     } = req.body;
 
     // Check if event exists (validate ObjectId first)
@@ -48,64 +52,17 @@ const createBooking = async (req, res) => {
     }
 
     // Get user ID from authenticated user
-    const userId = req.user?._id || req.body.userId; // Fallback to body if needed for testing
-    
-    // Debug log (remove in production)
-    console.log('User from request:', { 
-      user: req.user, 
-      userId,
-      headers: req.headers,
-      body: req.body 
-    });
-
+    const userId = req.user?._id;
     if (!userId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please log in to book an event.',
-        error: 'MISSING_USER_ID'
+        error: 'UNAUTHORIZED'
       });
     }
 
-    // Check if user already booked this event using userId
-    try {
-      const existingBooking = await Booking.findOne({ eventId, userId });
-      if (existingBooking) {
-        return res.status(409).json({
-          success: false,
-          message: 'You have already booked this event',
-          error: 'DUPLICATE_BOOKING',
-          bookingId: existingBooking.bookingId
-        });
-      }
-    } catch (error) {
-      console.error('Error checking for existing booking:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error checking booking status',
-        error: 'BOOKING_CHECK_ERROR'
-      });
-    }
-
-    // Check if roll number already booked this event
-    const existingRollBooking = await Booking.findOne({ eventId, rollNumber });
-    if (existingRollBooking) {
-      return res.status(409).json({
-        success: false,
-        message: 'This roll number has already been used to book this event'
-      });
-    }
-
-    // Generate booking ID
-    const generateBookingId = () => {
-      const timestamp = Date.now().toString(36);
-      const random = Math.random().toString(36).substring(2, 8);
-      return `BK${timestamp}${random}`.toUpperCase();
-    };
-
-    // Create new booking with user reference
-    const booking = new Booking({
-      eventId,
-      userId, // Add user reference
+    // Prepare booking data
+    const bookingData = {
       fullName,
       email,
       phone,
@@ -113,84 +70,73 @@ const createBooking = async (req, res) => {
       degree,
       college,
       department,
-      section,
-      year,
-      status: 'confirmed',
-      bookingDate: new Date(),
-      bookingId: generateBookingId() // Explicitly set bookingId
-    });
+      section: parseInt(section),
+      year
+    };
 
     try {
-      await booking.save();
-    } catch (saveError) {
-      console.error('Booking save error:', saveError);
+      // Check for duplicate bookings
+      await checkForDuplicateBookings(eventId, userId, rollNumber);
+
+      // Create booking
+      const booking = await createBookingUtil({
+        eventId,
+        userId,
+        bookingData,
+        payment: paymentId ? {
+          id: paymentId,
+          orderId,
+          amount: paymentAmount
+        } : null
+      });
+
+      // Send booking confirmation email
+      await sendBookingConfirmationEmail({
+        to: booking.email,
+        name: booking.fullName,
+        event: event,
+        bookingId: booking.bookingId
+      });
+
+      // Populate event details for response
+      await booking.populate('eventId', 'title dateTime location price');
+
+      res.status(201).json({
+        success: true,
+        message: 'Booking created successfully',
+        data: {
+          booking: {
+            bookingId: booking.bookingId,
+            eventTitle: booking.eventId.title,
+            studentName: booking.fullName,
+            email: booking.email,
+            rollNumber: booking.rollNumber,
+            paymentStatus: booking.paymentStatus,
+            bookingStatus: booking.status,
+            amountPaid: booking.paymentAmount,
+            createdAt: booking.createdAt
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error in createBooking:', error);
       
-      // Handle different types of duplicate key errors
-      if (saveError.code === 11000) {
-        if (saveError.keyPattern && saveError.keyPattern.bookingId) {
-          // Duplicate bookingId (very rare), retry once
-          booking.bookingId = generateBookingId();
-          await booking.save();
-        } else if (saveError.keyPattern && saveError.keyPattern.eventId && saveError.keyPattern.userId) {
-          // Duplicate user booking for this event
-          return res.status(409).json({
-            success: false,
-            message: 'You have already booked this event',
-            error: 'DUPLICATE_USER_BOOKING'
-          });
-        } else if (saveError.keyPattern && saveError.keyPattern.eventId && saveError.keyPattern.email) {
-          // Duplicate email booking for this event (legacy index)
-          return res.status(409).json({
-            success: false,
-            message: 'This email address has already been used to book this event',
-            error: 'DUPLICATE_EMAIL_BOOKING'
-          });
-        } else if (saveError.keyPattern && saveError.keyPattern.rollNumber && saveError.keyPattern.eventId) {
-          // Duplicate roll number for this event
-          return res.status(409).json({
-            success: false,
-            message: 'This roll number has already been used to book this event',
-            error: 'DUPLICATE_ROLL_NUMBER'
-          });
-        } else {
-          // Other duplicate key error
-          return res.status(409).json({
-            success: false,
-            message: 'Duplicate booking detected',
-            error: 'DUPLICATE_BOOKING_ERROR'
-          });
-        }
-      } else {
-        throw saveError;
+      // Handle known error types
+      if (error.status === 409) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+          error: error.error
+        });
       }
+      
+      // Handle other errors
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create booking',
+        error: error.message
+      });
     }
-
-    // ✅ Send booking confirmation email
-    await sendBookingConfirmationEmail({
-      to: booking.email,
-      name: booking.fullName,
-      event: event,
-      bookingId: booking.bookingId
-    });
-
-    // Populate event details for response
-    await booking.populate('eventId', 'title dateTime location price');
-
-    res.status(201).json({
-      success: true,
-      message: 'Booking created successfully',
-      data: {
-        booking: {
-          bookingId: booking.bookingId,
-          eventTitle: booking.eventId.title,
-          studentName: booking.fullName,
-          email: booking.email,
-          rollNumber: booking.rollNumber,
-          bookingStatus: booking.bookingStatus,
-          createdAt: booking.createdAt
-        }
-      }
-    });
 
   } catch (error) {
     console.error('Error creating booking:', error);

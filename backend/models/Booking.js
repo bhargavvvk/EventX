@@ -70,6 +70,19 @@ const BookingSchema = new mongoose.Schema({
     enum: ['paid', 'pending', 'failed'],
     default: 'pending'
   },
+  // Payment Information
+  paymentId: {
+    type: String,
+    default: null
+  },
+  orderId: {
+    type: String,
+    default: null
+  },
+  paymentAmount: {
+    type: Number,
+    default: 0
+  },
   bookingId: {
     type: String,
     required: true
