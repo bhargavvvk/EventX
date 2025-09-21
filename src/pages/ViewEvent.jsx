@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getUserRole } from '../utils/auth';
+import { getUserRole, isAuthenticated } from '../utils/auth';
 import axiosInstance from '../utils/axiosConfig';
 import { useState } from 'react';
 const ViewEvent = () => {
@@ -109,9 +109,18 @@ const ViewEvent = () => {
                Book Now
               </button>
             )}
-            <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate('/login')}>
-              Login
-            </button>
+              <button 
+                className="btn btn-primary eventbtn" 
+                style={{ backgroundColor: "#003285" }}
+                onClick={() => navigate(-1)}
+              >
+               Back
+              </button>
+            {!isAuthenticated() && (
+              <button className="btn btn-primary eventbtn" style={{ backgroundColor: "#003285" }} onClick={() => navigate('/login')}>
+                Login
+              </button>
+            )}
           </div>
         </div>
       </div>
