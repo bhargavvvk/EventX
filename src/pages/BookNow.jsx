@@ -110,9 +110,11 @@ const BookNow = () => {
     if (!validateForm()) return;
     
     setIsSubmitting(true);
+    setErrors({}); // Clear previous errors
     
     try {
-      const response = await axiosInstance.post(`/bookings/event/${eventId}`, {
+      // Prepare booking data
+      const bookingData = {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
@@ -122,16 +124,83 @@ const BookNow = () => {
         department: formData.department,
         section: parseInt(formData.section),
         year: formData.year
+      };
+
+      // Create order or directly book if free event
+      const response = await axiosInstance.post(`/payments/create-order/${eventId}`, {
+        bookingData
       });
 
-      // Store booking details from response for confirmation
-      console.log('Booking successful:', response.data);
-      setSubmitSuccess(true);
-      
-      // Reset form after successful submission
-      setTimeout(() => {
-        navigate(`/event/${eventId}`);
-      }, 3000);
+      // If it's a free event, handle the response directly
+      if (!response.data.data.paymentRequired) {
+        console.log('Free event booking successful:', response.data);
+        setSubmitSuccess(true);
+        
+        // Reset form after successful submission
+        setTimeout(() => {
+          navigate(`/event/${eventId}`);
+        }, 3000);
+        return;
+      }
+
+      // For paid events, handle Razorpay payment flow
+      const { orderId, amount, currency, keyId, eventTitle } = response.data.data;
+
+      // Configure Razorpay options
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: 'EventX',
+        description: `Booking for ${eventTitle}`,
+        order_id: orderId,
+        handler: async function (response) {
+          try {
+            // Verify payment and create booking
+            const verifyResponse = await axiosInstance.post(`/payments/verify-payment/${eventId}`, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingData
+            });
+
+            console.log('Payment verified and booking created:', verifyResponse.data);
+            setSubmitSuccess(true);
+            
+            // Reset form and redirect after successful payment
+            setTimeout(() => {
+              navigate(`/event/${eventId}`);
+            }, 3000);
+
+          } catch (verifyError) {
+            console.error('Payment verification failed:', verifyError);
+            setErrors({ 
+              submit: verifyError.response?.data?.message || 'Payment verification failed. Please contact support.' 
+            });
+          }
+        },
+        prefill: {
+          name: formData.fullName,
+          email: formData.email,
+          contact: formData.phone
+        },
+        notes: {
+          eventId: eventId,
+          rollNumber: formData.rollNumber
+        },
+        theme: {
+          color: '#003285'
+        },
+        modal: {
+          ondismiss: function() {
+            setErrors({ submit: 'Payment was cancelled. Please try again.' });
+          }
+        }
+      };
+
+      // Open Razorpay checkout for paid events
+      const rzp = new window.Razorpay(options);
+      rzp.open();
       
     } catch (error) {
       console.error('Booking failed:', error);
@@ -141,7 +210,6 @@ const BookNow = () => {
         
         if (status === 401) {
           setErrors({ submit: 'Authentication required. Please log in to book an event.' });
-          // Redirect to login after a short delay
           setTimeout(() => {
             navigate(`/login?redirect=/book/${eventId}`);
           }, 2000);
@@ -156,7 +224,7 @@ const BookNow = () => {
         } else if (status === 404) {
           setErrors({ submit: 'Event not found. Please try again.' });
         } else {
-          setErrors({ submit: data.message || 'Booking failed. Please try again.' });
+          setErrors({ submit: data?.message || 'Booking failed. Please try again.' });
         }
       } else {
         setErrors({ submit: 'Network error. Please check your connection and try again.' });
@@ -535,7 +603,7 @@ const BookNow = () => {
                 minWidth: '120px'
               }}
             >
-              {isSubmitting ? 'Booking...' : `Book Now - ₹${event.price}`}
+              {isSubmitting ? 'Processing...' : event.price > 0 ? `Pay Now - ₹${event.price}` : 'Book Now'}
             </Button>
           </Box>
         </form>

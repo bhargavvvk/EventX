@@ -5,6 +5,7 @@ const connectDB = require('./config/dbConnection');
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/eventroutes');
 const bookingRoutes = require('./routes/bookingRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // Import models to register them
 require('./models/Club');
@@ -18,7 +19,8 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/events', eventRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/bookings', bookingRoutes); 
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes); 
 
 const PORT = process.env.PORT || 5001;
 // Global error handler
